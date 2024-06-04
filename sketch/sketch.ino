@@ -1,41 +1,74 @@
+/*
+  Sketh to control Water flux according read value from moistore sensor
+
+
+*/
+
+
+/*************** PINS DECLARATIONS ***************/
 int pinSensor = A0;
-int pinWater = 13;
+int pinWaterController = 13;
+
+
+/************ COMOM VARIABLES / CONSTANTS ********/
 bool waterActivated = false;
 int currentSensorValue = 0;
 int currentMappedValue = 0;
-const int LIMIT_MOISTURE = 15;
+const int LIMIT_UMIDITY = 55;
+
+/*
+  https://www.biomaker.org/block-catalogue/2021/12/17/soil-moisture-sensor-aideepen-v12
+  [...]
+  The range will be divided into three sections: dry, wet, water. Their related values are:
+  Dry: (520 430]
+  Wet: (430 350]
+  Water: (350 260]
+  [...]
+*/
+const int MIN_SENSOR_CAPACITY = 0;
+const int MAX_SENSOR_CAPACITY = 1023;
+
+
+
 
 void setup() {
   Serial.begin(9600);
-  pinMode(pinWater,OUTPUT);
-  digitalWrite(pinWater,LOW);
+  pinMode(pinSensor,INPUT);
+  pinMode(pinWaterController,OUTPUT);
+  digitalWrite(pinWaterController,LOW);
 }
 
 void loop() {
-  handleWaterActive(checkMoistureLimit());
+  handleWaterActive(checkNeedWater());
   delay(1000);
 }
 
 /**
 * check current moisture return true if limit moisture is less than current value
 */
-bool checkMoistureLimit() {
-  currentSensorValue = 1023 - analogRead(pinSensor);
-  currentMappedValue = map(currentSensorValue,0,1023,0,100);
-  Serial.print("currentSensorValue: ");Serial.print(currentSensorValue);Serial.print(",");Serial.println(currentMappedValue);
-  return currentMappedValue < LIMIT_MOISTURE;
+bool checkNeedWater() {
+  bool result = false;
+  currentSensorValue = analogRead(pinSensor);
+  currentMappedValue = map(currentSensorValue,MAX_SENSOR_CAPACITY,MIN_SENSOR_CAPACITY,0,100);
+  result = currentMappedValue < LIMIT_UMIDITY;
+  Serial.print("currentSensorValue: ");Serial.print(currentSensorValue);Serial.print(" | ");Serial.print(currentMappedValue);Serial.print("%");
+  if (result) {
+    Serial.println("  water most are activated");
+  } else {
+    Serial.println("  water most are deactivated");
+  }
+  return result;
 }
+
 
 void handleWaterActive(bool active){
   if (active && !waterActivated) {     
     Serial.println("activating water...");
-    digitalWrite(pinWater,HIGH);
+    digitalWrite(pinWaterController,HIGH);
     waterActivated = true;
-    Serial.println("  activated");
   } else if (!active && waterActivated) {
     Serial.println("deactivating water...");
-    digitalWrite(pinWater,LOW);
+    digitalWrite(pinWaterController,LOW);
     waterActivated = false;
-    Serial.println("  deactivated");
-  }
+  }  
 }
